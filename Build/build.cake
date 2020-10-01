@@ -1,0 +1,73 @@
+//////////////////////////////////////////////////////////////////////
+// Example calls
+// .\build.ps1 -Script build.cake -Target Build -Configuration Debug
+// .\build.ps1 -Script build.cake -Target BuildAndTests -Configuration Debug
+//////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////
+// ARGUMENTS
+//////////////////////////////////////////////////////////////////////
+
+var target = Argument("target", "Build");
+var configuration = Argument("configuration", "Release");
+
+//////////////////////////////////////////////////////////////////////
+// PREPARATION
+//////////////////////////////////////////////////////////////////////
+
+// Define directories.
+var codeDir = "..";
+
+var solution = codeDir +"/DeckOfCards.sln";
+//////////////////////////////////////////////////////////////////////
+// TASKS
+//////////////////////////////////////////////////////////////////////
+
+Task("Clean-Code")
+    .Does(() =>
+{
+    DotNetCoreClean(solution);
+});
+
+Task("Restore-NuGet-Packages-Code")
+    .IsDependentOn("Clean-Code")
+    .Does(() =>
+{
+    DotNetCoreRestore(solution);
+});
+
+Task("Run-Build-Code")
+    .IsDependentOn("Restore-NuGet-Packages-Code")
+    .Does(() =>
+{
+  var settings = new DotNetCoreMSBuildSettings();
+  settings.SetConfiguration(configuration);
+  DotNetCoreMSBuild(solution, settings);
+});
+
+Task("Run-Unit-Tests-Code")
+    .IsDependentOn("Run-Build-Code")
+    .Does(() =>
+{
+    var projectFiles = GetFiles(codeDir + "/**/*Tests.csproj");
+    foreach(var file in projectFiles)
+    {
+        DotNetCoreTest(file.FullPath);
+    }
+});
+  
+//////////////////////////////////////////////////////////////////////
+// TASK TARGETS
+//////////////////////////////////////////////////////////////////////
+
+Task("Build")
+	.IsDependentOn("Run-Build-Code");
+	
+Task("BuildAndTests")
+	.IsDependentOn("Run-Unit-Tests-Code");
+	
+//////////////////////////////////////////////////////////////////////
+// EXECUTION
+//////////////////////////////////////////////////////////////////////
+
+RunTarget(target);
